@@ -1,30 +1,48 @@
+import os
 import requests
+import logging
+from datetime import datetime
 
-# 📌 KoboToolbox API Details
-KOBO_API_TOKEN = "767a060368dea8db5a949cab15bed40753abd45c"
-FORM_UID = "aUVPm42x6bpkWiESvQXzs3"
+# ✅ Setup logging for execution tracking
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logger = logging.getLogger()
+
+# 📌 Retrieve secrets from GitHub Secrets (set in GitHub Actions)
+KOBO_API_TOKEN = os.getenv("KOBO_API_TOKEN")
+FORM_UID = os.getenv("FORM_UID")
+BASE_ID = os.getenv("BASE_ID")
+TABLE_ID = os.getenv("TABLE_ID")
+AIRTABLE_API_KEY = os.getenv("AIRTABLE_API_KEY")
+
+# ✅ Validate secrets before execution
+if not all([KOBO_API_TOKEN, FORM_UID, BASE_ID, TABLE_ID, AIRTABLE_API_KEY]):
+    logger.error("❌ Missing one or more required environment variables!")
+    exit(1)
+
+# ✅ Construct API URLs
 KOBO_URL = f"https://kf.kobotoolbox.org/api/v2/assets/{FORM_UID}/data.json"
-kobo_headers = {"Authorization": f"Token {KOBO_API_TOKEN}"}
-
-# 📌 Airtable API Details
-AIRTABLE_API_KEY = "patY0PejDAEnhe3s1.21ea552a4087a748adedb348960dd29f8292405da7ab73f9d1474d53fe40340f"
-BASE_ID = "appLI5Xn8lZVRx7EV"
-TABLE_ID = "tblw2ybgsuQAJ4Wwx"
 AIRTABLE_URL = f"https://api.airtable.com/v0/{BASE_ID}/{TABLE_ID}"
+
+# ✅ Set API Headers
+kobo_headers = {"Authorization": f"Token {KOBO_API_TOKEN}"}
 airtable_headers = {
     "Authorization": f"Bearer {AIRTABLE_API_KEY}",
     "Content-Type": "application/json"
 }
 
-# 🔹 Step 1: Fetch Data from KoboToolbox
-response = requests.get(KOBO_URL, headers=kobo_headers)
-if response.status_code == 200:
-    data = response.json().get("results", [])
-else:
-    print("⚠️ Error fetching data from KoboToolbox:", response.text)
-    data = []
+logger.info("🔹 Starting KoboToolbox to Airtable Sync...")
 
-# Function to find existing participant record in Airtable
+# 🔹 Fetch Kobo Data
+try:
+    response = requests.get(KOBO_URL, headers=kobo_headers)
+    response.raise_for_status()  # Raise error if response is not 200
+    data = response.json().get("results", [])
+    logger.info(f"✅ Retrieved {len(data)} records from KoboToolbox.")
+except requests.exceptions.RequestException as e:
+    logger.error(f"❌ Error fetching data from KoboToolbox: {e}")
+    exit(1)
+
+# Function to find existing participant record & last processed time in Airtable
 def find_airtable_record(participant_id):
     query_params = {"filterByFormula": f"{{ID de participant}} = '{participant_id}'"}
     response = requests.get(AIRTABLE_URL, headers=airtable_headers, params=query_params)
@@ -32,8 +50,11 @@ def find_airtable_record(participant_id):
     if response.status_code == 200:
         records = response.json().get("records", [])
         if records:
-            return records[0]["id"]  # Return Airtable record ID
-    return None
+            record = records[0]
+            record_id = record["id"]
+            last_processed_time = record["fields"].get("Kobo integration last processed time", None)
+            return record_id, last_processed_time
+    return None, None
 
 # Function to insert a new recruit and return its Airtable "ID de participant"
 def insert_recruit(name, phone):
@@ -51,28 +72,36 @@ def insert_recruit(name, phone):
         records = response.json().get("records", [])
         if records:
             return records[0]["id"]  # Return Airtable-generated ID
-    print(f"❌ Error inserting recruit {name}: {response.text}")
+    logger.error(f"❌ Error inserting recruit {name}: {response.text}")
     return None
 
-# 🔹 Step 2: Process Kobo Data
+# 🔹 Process Kobo Data
 for entry in data:
     id_participant = entry.get("id_participant")  # Kobo participant ID
     id_ref = entry.get("id_ref")  # Recruited by
+    submission_time = entry.get("_submission_time")  # Kobo timestamp
 
-    # 1️⃣ Find participant record in Airtable
-    participant_record_id = find_airtable_record(id_participant)
+    # 1️⃣ Get Airtable record & last processed timestamp
+    participant_record_id, last_processed_time = find_airtable_record(id_participant)
+
+    # Convert timestamps to comparable format
+    if last_processed_time:
+        last_processed_time = last_processed_time.strip()  # Remove spaces
+        if submission_time <= last_processed_time:
+            logger.info(f"⚠️ Skipping {id_participant}, already processed.")
+            continue  # Skip if already processed
 
     if participant_record_id:
-        print(f"✅ Found Airtable record for participant {id_participant}: {participant_record_id}")
+        logger.info(f"✅ Found Airtable record for participant {id_participant}: {participant_record_id}")
 
         # 2️⃣ Update "Recruté par"
         update_payload = {"fields": {"Recruté par": str(id_ref)}}
         update_response = requests.patch(f"{AIRTABLE_URL}/{participant_record_id}", json=update_payload, headers=airtable_headers)
 
         if update_response.status_code == 200:
-            print(f"✅ Updated 'Recruté par' for {id_participant}")
+            logger.info(f"✅ Updated 'Recruté par' for {id_participant}")
         else:
-            print(f"❌ Error updating 'Recruté par': {update_response.text}")
+            logger.error(f"❌ Error updating 'Recruté par': {update_response.text}")
 
         # 3️⃣ Insert new recruits & collect their IDs
         recruit_ids = []
@@ -91,8 +120,19 @@ for entry in data:
             update_response = requests.patch(f"{AIRTABLE_URL}/{participant_record_id}", json=update_payload, headers=airtable_headers)
 
             if update_response.status_code == 200:
-                print(f"✅ Linked recruits {recruit_ids} to participant {id_participant}")
+                logger.info(f"✅ Linked recruits {recruit_ids} to participant {id_participant}")
             else:
-                print(f"❌ Error updating 'Recrues_ID': {update_response.text}")
+                logger.error(f"❌ Error updating 'Recrues_ID': {update_response.text}")
+
+        # 5️⃣ Update last processed timestamp
+        update_payload = {"fields": {"Kobo integration last processed time": submission_time}}
+        update_response = requests.patch(f"{AIRTABLE_URL}/{participant_record_id}", json=update_payload, headers=airtable_headers)
+
+        if update_response.status_code == 200:
+            logger.info(f"✅ Updated last processed time for {id_participant}")
+        else:
+            logger.error(f"❌ Error updating last processed time: {update_response.text}")
     else:
-        print(f"⚠️ No existing participant found for ID {id_participant}, skipping...")
+        logger.info(f"⚠️ No existing participant found for ID {id_participant}, skipping...")
+
+logger.info("🎉 Kobo-to-Airtable sync completed successfully!")
