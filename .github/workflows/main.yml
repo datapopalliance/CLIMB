@@ -13,6 +13,6 @@ jobs:
       - name: Run the workflow from subdirectory
         run: |
           cd kobo-airtable-sync
-          gh workflow run airtable_kobo_sync.yml
+          gh workflow run kobo_to_airtable.yml
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
