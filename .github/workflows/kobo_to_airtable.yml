@@ -21,9 +21,9 @@ jobs:
       - name: Install dependencies
         run: |
           cd kobo-airtable-sync
-          pip install -r requirements.txt
+          pip install -r kobo-airtable-sync/requirements.txt
 
       - name: Run Kobo-Airtable Sync
         run: |
           cd kobo-airtable-sync
-          python kobo_airtable_sync.py
+          python kobo-airtable-sync/src/kobo_airtable_sync.py
