@@ -2,6 +2,8 @@
 
 This repository automates the integration of **KoboToolbox** responses into **Airtable**, ensuring that new survey data is processed and updated efficiently.
 
+More details available [in this Google Doc](https://docs.google.com/document/d/1DH3-7dv5KrfUQT29mKUVag_GMvHy_JPLqctZ1BNwaas/edit?tab=t.0)
+
 ## **Overview**  
 - **Fetches** new survey responses from **KoboToolbox**.  
 - **Updates** existing participant records in **Airtable**.  
