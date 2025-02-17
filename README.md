@@ -90,11 +90,3 @@ python kobo-airtable-sync/src/kobo_to_airtable.py
 - **GitHub Actions not triggering?** Ensure `workflow_dispatch` is included in `kobo_to_airtable.yml`.
 
 ---
-
-## 🤝 Contributing
-Pull requests are welcome! Please ensure changes are well-documented.
-
----
-
-## 📜 License
-MIT License.
