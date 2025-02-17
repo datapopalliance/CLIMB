@@ -31,10 +31,10 @@ CLIMB/
 │   │   ├── config.json           # Configurations (API keys, etc.)
 │   ├── docs/
 │   │   ├── README.md             # 📌 This document
-│   ├── .github/workflows/
-│   │   ├── kobo_to_airtable.yml  # 🛠️ GitHub Actions workflow
 │   ├── requirements.txt          # 📦 Python dependencies
 │   ├── .env                      # 🔑 Environment variables (not in repo)
+├── .github/workflows/
+│   ├── kobo_to_airtable.yml  # 🛠️ GitHub Actions workflow
 ```
 
 ---
