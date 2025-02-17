@@ -30,4 +30,5 @@ jobs:
           AIRTABLE_API_KEY: ${{ secrets.AIRTABLE_API_KEY }}
           BASE_ID: ${{ secrets.BASE_ID }}
           TABLE_ID: ${{ secrets.TABLE_ID }}
+          FORM_UID: ${{ secrets.FORM_UID }}
         run: python kobo-airtable-sync/src/kobo_to_airtable.py
