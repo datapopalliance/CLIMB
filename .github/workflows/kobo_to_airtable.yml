@@ -1,29 +1,28 @@
-name: Run Kobo to Airtable Sync
+name: Kobo to Airtable Sync
 
 on:
+  push:
+    branches:
+      - main
   schedule:
-    - cron: '0 * * * *'  # Runs every hour
-  workflow_dispatch:
+    - cron: "0 * * * *"  # Runs every hour
 
 jobs:
-  sync:
+  run-script:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - name: Checkout repo
+        uses: actions/checkout@v3
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v3
         with:
-          python-version: "3.9"
+          python-version: '3.9'
 
       - name: Install dependencies
         run: |
-          cd kobo-airtable-sync
-          pip install -r requirements.txt
+          pip install -r kobo-airtable-sync/requirements.txt
 
-      - name: Run Kobo-Airtable Sync
+      - name: Run Kobo to Airtable sync
         run: |
-          cd kobo-airtable-sync
-          python src/kobo_airtable_sync.py
+          python kobo-airtable-sync/src/kobo_airtable_sync.py  # 🔥 Ensure correct path
