@@ -1,12 +1,12 @@
-name: Sync KoboToolbox to Airtable
+name: Run Kobo to Airtable Sync
 
 on:
   schedule:
-    - cron: "0 * * * *"  # Runs every hour
-  workflow_dispatch:  # Allows manual trigger
+    - cron: '0 * * * *'  # Runs every hour
+  workflow_dispatch:
 
 jobs:
-  sync_data:
+  sync:
     runs-on: ubuntu-latest
 
     steps:
@@ -16,16 +16,14 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: "3.10"
+          python-version: "3.9"
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: |
+          cd kobo-airtable-sync
+          pip install -r requirements.txt
 
-      - name: Run Kobo-to-Airtable Sync
-        env:
-          KOBO_API_TOKEN: ${{ secrets.KOBO_API_TOKEN }}
-          KOBO_FORM_UID: ${{ secrets.KOBO_FORM_UID }}
-          AIRTABLE_API_KEY: ${{ secrets.AIRTABLE_API_KEY }}
-          AIRTABLE_BASE_ID: ${{ secrets.AIRTABLE_BASE_ID }}
-          AIRTABLE_TABLE_ID: ${{ secrets.AIRTABLE_TABLE_ID }}
-        run: python kobo-airtable-sync/kobo_airtable_sync.py
+      - name: Run Kobo-Airtable Sync
+        run: |
+          cd kobo-airtable-sync
+          python kobo_airtable_sync.py
