@@ -25,4 +25,4 @@ jobs:
 
       - name: Run Kobo to Airtable sync
         run: |
-          python kobo-airtable-sync/src/kobo_airtable_sync.py  # 🔥 Ensure correct path
+          python kobo-airtable-sync/src/kobo_to_airtable.py  # 🔥 Ensure correct path
