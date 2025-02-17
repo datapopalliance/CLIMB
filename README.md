@@ -1,63 +1,100 @@
-# **Kobo to Airtable Sync**  
+# 📌 KoboToolbox to Airtable Sync
 
-This repository automates the integration of **KoboToolbox** responses into **Airtable**, ensuring that new survey data is processed and updated efficiently.
+This repository automates the process of synchronizing data from **KoboToolbox** to **Airtable**. The script fetches survey responses from KoboToolbox, processes participant and recruiter records, checks for duplicates, and updates Airtable accordingly.
 
-More details available [in this Google Doc](https://docs.google.com/document/d/1DH3-7dv5KrfUQT29mKUVag_GMvHy_JPLqctZ1BNwaas/edit?tab=t.0)
+## 🚀 Features & Updates
 
-## **Overview**  
-- **Fetches** new survey responses from **KoboToolbox**.  
-- **Updates** existing participant records in **Airtable**.  
-- **Inserts** new recruits and links them to the correct participant.  
-- **Prevents duplicates** by checking the last processed timestamp.  
-- **Runs automatically** via GitHub Actions on a **cron schedule**.
+✅ **Ensures records are not processed multiple times**
+   - Uses `Kobo integration last processed time` in Airtable to track updates.
+   - Skips records if they have already been processed.
 
-## **Airtable Changes**  
-The script modifies Airtable records as follows:  
-- Updates **"Recruté par"** for each participant.  
-- Inserts new recruit records with **"Prénom"** and **"Numéro de téléphone"**.  
-- Links new recruit IDs to the original participant under **"Recrues_ID"**.  
-- Updates **"Kobo integration last processed time"** to prevent duplicate processing.
+✅ **Ensures participant IDs match between Kobo and Airtable**
+   - Coerces `ID de participant` from both sources to integers before comparing.
 
-## **Automation with GitHub Actions**  
-- **Runs hourly** using a cron job (`0 * * * *`).  
-- Can also be **triggered manually** via the GitHub Actions UI.  
-- **Ensures reliability** by automating data sync.
+✅ **Handles duplicate phone numbers correctly**
+   - Cleans phone numbers (removes spaces, dashes, slashes, etc.).
+   - Checks for existing numbers in Airtable before inserting new recruits.
 
-## **Secure Credentials**  
-- API keys and tokens are **not hardcoded**.  
-- They are securely stored in **GitHub Secrets** (`Settings → Secrets and variables → Actions`).  
-- The script retrieves credentials from **environment variables** during execution.
-
-## **Repository Structure**  
-```
-📂 kobo-to-airtable-sync
-│── .github/
-│   └── workflows/
-│       └── sync_kobo_to_airtable.yml  # GitHub Actions automation
-│── scripts/
-│   └── kobo_to_airtable.py            # Main integration script
-│── README.md                           # Documentation
-│── requirements.txt                     # Python dependencies
-```
-
-## **Setup & Deployment**  
-1. **Clone the repository**  
-   ```sh
-   git clone https://github.com/your-username/kobo-to-airtable-sync.git
-   cd kobo-to-airtable-sync
-   ```
-2. **Install dependencies**  
-   ```sh
-   pip install -r requirements.txt
-   ```
-3. **Run the script manually** (for testing)  
-   ```sh
-   python scripts/kobo_to_airtable.py
-   ```
-4. **Automated Execution**  
-   - GitHub Actions runs it every hour.  
-   - Modify `.github/workflows/sync_kobo_to_airtable.yml` to change the schedule.
+✅ **Improved logging & error handling**
+   - Stops execution if `Kobo integration last processed time` field does not exist.
+   - Provides detailed logs for debugging.
 
 ---
 
-**This integration ensures seamless synchronization between KoboToolbox and Airtable, enabling real-time data updates without manual intervention. 🚀**
+## 📂 Repository Structure
+```
+CLIMB/
+├── kobo-airtable-sync/
+│   ├── src/
+│   │   ├── kobo_to_airtable.py   # 🔥 Main script
+│   ├── config/
+│   │   ├── config.json           # Configurations (API keys, etc.)
+│   ├── docs/
+│   │   ├── README.md             # 📌 This document
+│   ├── .github/workflows/
+│   │   ├── kobo_to_airtable.yml  # 🛠️ GitHub Actions workflow
+│   ├── requirements.txt          # 📦 Python dependencies
+│   ├── .env                      # 🔑 Environment variables (not in repo)
+```
+
+---
+
+## ⚙️ Setup & Configuration
+
+### **1️⃣ Install dependencies**
+```sh
+pip install -r requirements.txt
+```
+
+### **2️⃣ Set up environment variables**
+Define the following secrets in **GitHub Actions** or in a `.env` file:
+```sh
+KOBO_API_TOKEN=your_kobo_api_token
+FORM_UID=your_kobo_form_uid
+BASE_ID=your_airtable_base_id
+TABLE_ID=your_airtable_table_id
+AIRTABLE_API_KEY=your_airtable_api_key
+```
+
+### **3️⃣ Run the script locally**
+```sh
+python kobo-airtable-sync/src/kobo_to_airtable.py
+```
+
+### **4️⃣ Automate with GitHub Actions**
+- Ensure `kobo_to_airtable.yml` is in `.github/workflows/`
+- Trigger manually or set up a schedule
+
+---
+
+## 🔍 Workflow Overview
+
+```plaintext
+1️⃣ Fetch unprocessed records from KoboToolbox.
+2️⃣ Find the corresponding participant in Airtable.
+3️⃣ Update "Recruté par" field.
+4️⃣ Process recruits:
+   - If phone number exists → Link existing record.
+   - If phone number does not exist → Insert new recruit.
+5️⃣ Update "Recrues_ID" with new recruits.
+6️⃣ Update "Statut" field.
+7️⃣ Update "Kobo integration last processed time" in Airtable.
+```
+
+---
+
+## 🚑 Troubleshooting
+
+- **"No existing participant found" error?** Ensure IDs are integers in both Kobo and Airtable.
+- **Repeated records?** Check for duplicate phone numbers in Airtable.
+- **GitHub Actions not triggering?** Ensure `workflow_dispatch` is included in `kobo_to_airtable.yml`.
+
+---
+
+## 🤝 Contributing
+Pull requests are welcome! Please ensure changes are well-documented.
+
+---
+
+## 📜 License
+MIT License.
