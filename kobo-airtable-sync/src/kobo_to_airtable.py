@@ -8,12 +8,24 @@ from datetime import datetime
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger()
 
+TEST_ENVIRONMENT = True
+
+
 # 📌 Retrieve secrets from GitHub Secrets (set in GitHub Actions)
-KOBO_API_TOKEN = os.getenv("KOBO_API_TOKEN")
-FORM_UID = os.getenv("FORM_UID")
-BASE_ID = os.getenv("BASE_ID")
-TABLE_ID = os.getenv("TABLE_ID")
-AIRTABLE_API_KEY = os.getenv("AIRTABLE_API_KEY")
+
+if TEST_ENVIRONMENT:
+    KOBO_API_TOKEN = os.getenv("KOBO_API_TOKEN")
+    FORM_UID = os.getenv("KOBO_FORM_UID_RDS")
+    BASE_ID = os.getenv("RDS_CLIMB_TEST_BASE_ID")
+    TABLE_ID = os.getenv("RDS_CLIMB_TEST_TABLE_ID")
+    AIRTABLE_API_KEY = os.getenv("AIRTABLE_API_KEY")
+    
+else:
+    KOBO_API_TOKEN = os.getenv("KOBO_API_TOKEN")
+    FORM_UID = os.getenv("FORM_UID")
+    BASE_ID = os.getenv("BASE_ID")
+    TABLE_ID = os.getenv("TABLE_ID")
+    AIRTABLE_API_KEY = os.getenv("AIRTABLE_API_KEY")
 
 # ✅ Validate secrets before execution
 if not all([KOBO_API_TOKEN, FORM_UID, BASE_ID, TABLE_ID, AIRTABLE_API_KEY]):
