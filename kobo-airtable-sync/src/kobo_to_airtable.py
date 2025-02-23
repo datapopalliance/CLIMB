@@ -185,7 +185,7 @@ for entry in kobo_data:
     # 4️⃣ Update participant's "Recrues_ID" with new recruits
     if recruit_ids:
         update_payload = {"fields": {"Recrues_ID": recruit_ids}}
-        requests.patch(f"{AIRTABLE_URL}/{record_id}", json=update_payload, headers=airtable_headers)
+        update_response = requests.patch(f"{AIRTABLE_URL}/{record_id}", json=update_payload, headers=airtable_headers)
 
         if update_response.status_code == 200:
             logger.info(f"✅ Linked recruits {recruit_ids} to participant {id_participant}")
