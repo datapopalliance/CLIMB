@@ -28,8 +28,16 @@ else:
     AIRTABLE_API_KEY = os.getenv("AIRTABLE_API_KEY")
 
 # ✅ Validate secrets before execution
-if not all([KOBO_API_TOKEN, FORM_UID, BASE_ID, TABLE_ID, AIRTABLE_API_KEY]):
-    logger.error("❌ Missing one or more required environment variables!")
+missing_vars = [var for var, val in {
+    "KOBO_API_TOKEN": KOBO_API_TOKEN,
+    "FORM_UID": FORM_UID,
+    "BASE_ID": BASE_ID,
+    "TABLE_ID": TABLE_ID,
+    "AIRTABLE_API_KEY": AIRTABLE_API_KEY
+}.items() if not val]
+
+if missing_vars:
+    logger.error(f"❌ Missing one or more required environment variables: {', '.join(missing_vars)}")
     exit(1)
 
 # ✅ Construct API URLs
