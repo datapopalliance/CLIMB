@@ -110,7 +110,7 @@ def insert_recruit(name, phone, ref_id):
         "Prénom": name,
         "Numéro de téléphone": phone,
         "Date de soumission": datetime.now().strftime("%Y-%m-%d"),
-        "Recrute par": ref_id
+        "Recrute par": str(ref_id)
     }}]}
     response = requests.post(AIRTABLE_URL, json=payload, headers=airtable_headers)
     
