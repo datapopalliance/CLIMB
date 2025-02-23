@@ -80,6 +80,7 @@ def fetch_existing_airtable_records():
                 phone = fields.get("Numéro de téléphone")
                 carrier = fields.get("Opérateur")
                 last_processed_time = fields.get("Kobo integration last processed time")
+                recrute_par = fields.get("Recrute par")
                 
                 if participant_id is not None:
                     existing_records[participant_id] = {
@@ -88,6 +89,7 @@ def fetch_existing_airtable_records():
                         "phone_numbers": [clean_phone_number(num) for num in re.split(r"[,/-]", phone)] if phone else [],
                         "phone": clean_phone_number(phone),
                         "carrier": carrier,
+                        "recrute_par": safe_int(recrute_par) if recrute_par else None
                     }
             
             offset = data.get("offset")
@@ -103,13 +105,12 @@ def fetch_existing_airtable_records():
     
     return existing_records
 
-def insert_recruit(name, phone, ref_phone, ref_carrier):
+def insert_recruit(name, phone, ref_id):
     payload = {"records": [{"fields": {
         "Prénom": name,
         "Numéro de téléphone": phone,
         "Date de soumission": datetime.now().strftime("%Y-%m-%d"),
-        "ref_phone": ref_phone,
-        "ref_carrier": ref_carrier
+        "Recrute par": ref_id
     }}]}
     response = requests.post(AIRTABLE_URL, json=payload, headers=airtable_headers)
     
@@ -119,6 +120,7 @@ def insert_recruit(name, phone, ref_phone, ref_carrier):
             return records[0]["id"]
     logger.error(f"❌ Error inserting recruit {name}: {response.text}")
     return None
+
 
 # ✅ Step 1: Fetch all existing Airtable records
 logger.info("🔹 Fetching existing Airtable records...")
@@ -170,15 +172,8 @@ for i in range(1, 4):  # Up to 3 recruits
     recruit_name = entry.get(f"RECRUITMENT/RECRUIT{i}_NAME", "").strip()
     recruit_phone = clean_phone_number(entry.get(f"RECRUITMENT/RECRUIT{i}_PHONE", "").strip())
 
-    if recruit_name and recruit_phone:
-        has_recruits = True  # At least one recruit exists
-        
-        # Check if recruit already exists in Airtable by phone number
-        existing_recruit_id = None
-        for participant, data in existing_airtable_records.items():
-            if recruit_phone in data["phone_numbers"]:
-                existing_recruit_id = data["record_id"]
-                break
+        if recruit_name and recruit_phone:
+            existing_recruit_id = next((data["record_id"] for data in existing_airtable_records.values() if recruit_phone in data["phone_numbers"]), None)
 
         if existing_recruit_id:
             logger.info(f"🔹 Recruit {recruit_name} already exists, linking to existing record.")
