@@ -164,6 +164,10 @@ for entry in kobo_data:
         logger.info(f"⚠️ Skipping {id_participant}, already processed.")
         continue
 
+    # ✅ Update "Recrute par" for existing records
+    update_payload = {"fields": {"Recrute par": str(id_ref)}}
+    requests.patch(f"{AIRTABLE_URL}/{record_id}", json=update_payload, headers=airtable_headers)
+        
     logger.info(f"✅ Processing participant {id_participant}...")
 
     # ✅ Step 4: Process recruits
