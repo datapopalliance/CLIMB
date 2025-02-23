@@ -13,7 +13,6 @@ TEST_ENVIRONMENT = True
 # 📌 Retrieve secrets from environment variables
 if TEST_ENVIRONMENT:
     KOBO_API_TOKEN = os.getenv("KOBO_API_TOKEN")
-    FORM_UID = os.getenv("KOBO_API_TOKEN")  # (Adjust if needed)
     FORM_UID = os.getenv("KOBO_FORM_UID_RDS")
     BASE_ID = os.getenv("RDS_CLIMB_TEST_BASE_ID")
     TABLE_ID = os.getenv("RDS_CLIMB_TEST_TABLE_ID")
@@ -61,7 +60,6 @@ def safe_int(value):
         return None
 
 def fetch_existing_airtable_records():
-    # Now we key the dictionary by the cleaned phone number.
     existing_records = {}
     field_exists = False
     offset = None
@@ -79,21 +77,21 @@ def fetch_existing_airtable_records():
                     field_exists = True
                 
                 participant_id = safe_int(fields.get("ID de participant"))
-                raw_phone = fields.get("Numéro de téléphone")
-                phone = clean_phone_number(raw_phone)
+                phone = fields.get("Numéro de téléphone")
                 carrier = fields.get("Opérateur")
                 last_processed_time = fields.get("Kobo integration last processed time")
                 recrute_par = fields.get("Recruté par")
                 
-                if phone:
-                    existing_records[phone] = {
+                if participant_id is not None:
+                    existing_records[participant_id] = {
                         "record_id": record["id"],
-                        "participant_id": participant_id,
                         "last_processed_time": last_processed_time,
-                        "phone": phone,
+                        "phone_numbers": [clean_phone_number(num) for num in re.split(r"[,/-]", phone)] if phone else [],
+                        "phone": clean_phone_number(phone),
                         "carrier": carrier,
                         "recrute_par": safe_int(recrute_par) if recrute_par else None
                     }
+            
             offset = data.get("offset")
             if not offset:
                 break
@@ -107,19 +105,18 @@ def fetch_existing_airtable_records():
     
     return existing_records
 
-def insert_recruit(name, recruit_phone, parent_data):
-    # Use parent's data to set referral fields.
-    parent_phone = parent_data.get("phone", "")
-    parent_carrier = parent_data.get("carrier", "")
-    parent_id = parent_data.get("participant_id", "")
+def insert_recruit(name, phone, ref_id):
+    ref_data = existing_airtable_records.get(ref_id, {})
+    ref_phone = ref_data.get("phone", "")
+    ref_carrier = ref_data.get("carrier", "")
     
     payload = {"records": [{"fields": {
         "Prénom": name,
-        "Numéro de téléphone": recruit_phone,
+        "Numéro de téléphone": phone,
         "Date de soumission": datetime.now().strftime("%Y-%m-%d"),
-        "Recruté par": str(parent_id),
-        "ref_phone": parent_phone,
-        "ref_carrier": parent_carrier
+        "Recruté par": str(ref_id),
+        "ref_phone": ref_phone,
+        "ref_carrier": ref_carrier
     }}]}
     response = requests.post(AIRTABLE_URL, json=payload, headers=airtable_headers)
     
@@ -130,7 +127,8 @@ def insert_recruit(name, recruit_phone, parent_data):
     logger.error(f"❌ Error inserting recruit {name}: {response.text}")
     return None
 
-# ✅ Step 1: Fetch all existing Airtable records (keyed by phone number)
+
+# ✅ Step 1: Fetch all existing Airtable records
 logger.info("🔹 Fetching existing Airtable records...")
 existing_airtable_records = fetch_existing_airtable_records()
 logger.info(f"✅ Fetched {len(existing_airtable_records)} records from Airtable.")
@@ -147,15 +145,15 @@ except requests.exceptions.RequestException as e:
     
 # ✅ Step 3: Process Kobo Data
 for entry in kobo_data:
-    # Use the phone number to look up the existing record.
-    phone = clean_phone_number(entry.get("Numéro de téléphone"))
-    submission_time = entry.get("_submission_time")
-    id_ref = safe_int(entry.get("id_ref"))
     id_participant = safe_int(entry.get("id_participant"))
+    id_ref = safe_int(entry.get("id_ref"))
+    submission_time = entry.get("_submission_time")
+
+    # ✅ Check if participant exists in Airtable
+    participant_data = existing_airtable_records.get(id_participant)
     
-    participant_data = existing_airtable_records.get(phone)
     if not participant_data:
-        logger.warning(f"⚠️ No existing participant found for phone {phone}, skipping...")
+        logger.warning(f"⚠️ No existing participant found for ID {id_participant}, skipping...")
         continue
 
     record_id = participant_data["record_id"]
@@ -163,18 +161,14 @@ for entry in kobo_data:
 
     # ✅ Compare submission time with last processed time
     if last_processed_time and submission_time <= last_processed_time:
-        logger.info(f"⚠️ Skipping phone {phone}, already processed.")
+        logger.info(f"⚠️ Skipping {id_participant}, already processed.")
         continue
 
-    # ✅ Update "Recruté par" for existing records based on phone number
-    update_payload = {"fields": {"Recruté par": str(id_ref)}}
-    update_response = requests.patch(f"{AIRTABLE_URL}/{record_id}", json=update_payload, headers=airtable_headers)
-    if update_response.status_code == 200:
-        logger.info(f"✅ Updated 'Recruté par' for participant with phone {phone} to '{id_ref}'")
-    else:
-        logger.error(f"❌ Error updating 'Recruté par': {update_response.text}")
-    
-    logger.info(f"✅ Processing participant {id_participant} with phone {phone}...")
+    # ✅ Update "Recrute par" for existing records
+    update_payload = {"fields": {"Recrute par": str(id_ref)}}
+    requests.patch(f"{AIRTABLE_URL}/{record_id}", json=update_payload, headers=airtable_headers)
+        
+    logger.info(f"✅ Processing participant {id_participant}...")
 
     # ✅ Step 4: Process recruits
     recruit_ids = []
@@ -183,16 +177,12 @@ for entry in kobo_data:
         recruit_phone = clean_phone_number(entry.get(f"RECRUITMENT/RECRUIT{i}_PHONE", "").strip())
         
         if recruit_name and recruit_phone:
-            # Look for an existing recruit by matching phone number exactly
-            existing_recruit_id = None
-            for rec in existing_airtable_records.values():
-                if recruit_phone == rec["phone"]:
-                    existing_recruit_id = rec["record_id"]
-                    break
+            existing_recruit_id = next((data["record_id"] for data in existing_airtable_records.values() if recruit_phone in data["phone_numbers"]), None)
+            
             if existing_recruit_id:
                 recruit_ids.append(existing_recruit_id)
             else:
-                new_recruit_id = insert_recruit(recruit_name, recruit_phone, participant_data)
+                new_recruit_id = insert_recruit(recruit_name, recruit_phone, id_participant)
                 if new_recruit_id:
                     recruit_ids.append(new_recruit_id)
 
@@ -200,6 +190,7 @@ for entry in kobo_data:
     if recruit_ids:
         update_payload = {"fields": {"Recrues_ID": recruit_ids}}
         update_response = requests.patch(f"{AIRTABLE_URL}/{record_id}", json=update_payload, headers=airtable_headers)
+
         if update_response.status_code == 200:
             logger.info(f"✅ Linked recruits {recruit_ids} to participant {id_participant}")
         else:
@@ -208,6 +199,7 @@ for entry in kobo_data:
     # 5️⃣ Populate "Statut" field based on recruitment status
     statut = "Participant et recruteur" if recruit_ids else "Participant mais pas recruteur"
     statut_response = requests.patch(f"{AIRTABLE_URL}/{record_id}", json={"fields": {"Statut": statut}}, headers=airtable_headers)
+    
     if statut_response.status_code == 200:
         logger.info(f"✅ Updated 'Statut' for participant {id_participant} to '{statut}'")
     else:
