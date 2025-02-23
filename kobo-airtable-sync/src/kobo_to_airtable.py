@@ -80,7 +80,7 @@ def fetch_existing_airtable_records():
                 phone = fields.get("Numéro de téléphone")
                 carrier = fields.get("Opérateur")
                 last_processed_time = fields.get("Kobo integration last processed time")
-                recrute_par = fields.get("Recrute par")
+                recrute_par = fields.get("Recruté par")
                 
                 if participant_id is not None:
                     existing_records[participant_id] = {
@@ -110,7 +110,7 @@ def insert_recruit(name, phone, ref_id):
         "Prénom": name,
         "Numéro de téléphone": phone,
         "Date de soumission": datetime.now().strftime("%Y-%m-%d"),
-        "Recrute par": str(ref_id)
+        "Recruté par": str(ref_id)
     }}]}
     response = requests.post(AIRTABLE_URL, json=payload, headers=airtable_headers)
     
