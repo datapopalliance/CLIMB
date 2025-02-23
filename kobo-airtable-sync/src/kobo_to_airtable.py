@@ -197,7 +197,7 @@ for entry in kobo_data:
     statut_response = requests.patch(f"{AIRTABLE_URL}/{record_id}", json={"fields": {"Statut": statut}}, headers=airtable_headers)
     
     if statut_response.status_code == 200:
-        logger.info(f"✅ Updated 'Statut' for participant {id_participant} to '{statut_value}'")
+        logger.info(f"✅ Updated 'Statut' for participant {id_participant} to '{statut}'")
     else:
         logger.error(f"❌ Error updating 'Statut': {statut_response.text}")
         
