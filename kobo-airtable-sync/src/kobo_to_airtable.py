@@ -169,26 +169,18 @@ for entry in kobo_data:
         ref_phone = existing_airtable_records[id_ref].get("phone_numbers", [None])[0]  # Get first phone if exists
         ref_carrier = existing_airtable_records[id_ref].get("carrier")
 
-    # ✅ Step 5: Process recruits
-    recruit_ids = []
-    for i in range(1, 4):  # Up to 3 recruits
-        recruit_name = entry.get(f"RECRUITMENT/RECRUIT{i}_NAME", "").strip()
-        recruit_phone = clean_phone_number(entry.get(f"RECRUITMENT/RECRUIT{i}_PHONE", "").strip())
+    # ✅ Step 5: Update "Recrues_ID" in Airtable if new recruits exist
+    if recruit_ids:
+        requests.patch(f"{AIRTABLE_URL}/{record_id}", json={"fields": {"Recrues_ID": recruit_ids}}, headers=airtable_headers)
 
-        if recruit_name and recruit_phone:
-            # Check if recruit already exists in Airtable by phone number
-            existing_recruit_id = None
-            for participant, data in existing_airtable_records.items():
-                if recruit_phone in data["phone_numbers"]:
-                    existing_recruit_id = data["record_id"]
-                    break
+    # ✅ Step 6: Update "Recruté par" in Airtable
+    requests.patch(f"{AIRTABLE_URL}/{record_id}", json={"fields": {"Recruté par": str(id_ref)}}, headers=airtable_headers)
 
-            if existing_recruit_id:
-                logger.info(f"🔹 Recruit {recruit_name} already exists, linking to existing record.")
-                recruit_ids.append(existing_recruit_id)
-            else:
-                new_recruit_id = insert_recruit(recruit_name, recruit_phone, ref_phone, ref_carrier)
-                if new_recruit_id:
-                    recruit_ids.append(new_recruit_id)
+    # ✅ Step 7: Update "Statut"
+    statut = "Participant et recruteur" if recruit_ids else "Participant mais pas recruteur"
+    requests.patch(f"{AIRTABLE_URL}/{record_id}", json={"fields": {"Statut": statut}}, headers=airtable_headers)
 
-    logger.info("🎉 Kobo-to-Airtable sync completed successfully!")
+    # ✅ Step 8: Update "Kobo integration last processed time"
+    requests.patch(f"{AIRTABLE_URL}/{record_id}", json={"fields": {"Kobo integration last processed time": submission_time}}, headers=airtable_headers)
+
+logger.info("🎉 Kobo-to-Airtable sync completed successfully!")
