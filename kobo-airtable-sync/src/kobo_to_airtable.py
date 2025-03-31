@@ -8,7 +8,7 @@ from datetime import datetime
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger()
 
-TEST_ENVIRONMENT = True
+TEST_ENVIRONMENT = False
 
 # 📌 Retrieve secrets from environment variables
 if TEST_ENVIRONMENT:
