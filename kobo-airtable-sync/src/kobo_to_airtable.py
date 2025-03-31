@@ -173,8 +173,8 @@ for entry in kobo_data:
     # ✅ Step 4: Process recruits
     recruit_ids = []
     for i in range(1, 4):
-        recruit_name = entry.get(f"RECRUITMENT/RECRUIT{i}_NAME", "").strip()
-        recruit_phone = clean_phone_number(entry.get(f"RECRUITMENT/RECRUIT{i}_PHONE", "").strip())
+        recruit_name = entry.get(f"ELIGIBLE/ELIGIBLE_YES/RECRUITMENT/RECRUITMENT{i}/RECRUIT{i}_NAME", "").strip()
+        recruit_phone = clean_phone_number(entry.get(f"ELIGIBLE/ELIGIBLE_YES/RECRUITMENT/RECRUITMENT{i}/RECRUIT{i}_PHONE", "").strip())
         
         if recruit_name and recruit_phone:
             existing_recruit_id = next((data["record_id"] for data in existing_airtable_records.values() if recruit_phone in data["phone_numbers"]), None)
