@@ -1,12 +1,9 @@
 name: Kobo to Airtable Sync
 
 on:
-  push:
-    branches:
-      - main
-  schedule:
-    - cron: "*/10 * * * *"  # Runs every 10 minutes
-  workflow_dispatch:  # ✅ Allows manual triggering
+  # Remove push/schedule if you want to prevent any automatic runs
+  # Keep only workflow_dispatch so it can be invoked by 'gh workflow run'
+  workflow_dispatch:
 
 jobs:
   run-script:
