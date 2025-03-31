@@ -1,7 +1,9 @@
 name: Trigger Kobo-Airtable Sync
 
 on:
-  workflow_dispatch:  # Allows manual execution
+  schedule:
+    - cron: "*/10 * * * *"   # Runs every 10 minutes
+  workflow_dispatch:          # Allows manual execution as well
 
 jobs:
   trigger-subworkflow:
